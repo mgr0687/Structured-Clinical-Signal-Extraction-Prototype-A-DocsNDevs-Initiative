@@ -8,6 +8,7 @@ dependencies = [
   "python-dotenv>=1.0",
   "typer>=0.9",
   "rich>=13.0",
+  "openai>=1.0",
 ]
 
 [build-system]
