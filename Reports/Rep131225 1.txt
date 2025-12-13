@@ -1,0 +1,71 @@
+12 13 2025 03:33am Brazil
+First Development Report — DonDiePlz 1.0 (Early Prototype)
+
+This is my first development report.
+
+The initial goal of this project was to build a framework-conditional clinical text structuring pipeline, starting with a fully local, deterministic prototype. At this stage, the focus is governance, epistemic limits, and error discovery—not performance, scale, or clinical validity.
+
+Early on, I realized I had underestimated how contextual and subjective psychiatric signals can be, even when mapped to structured instruments. My first implementation attempt felt “dead on arrival”: I had sketched a pipeline that would likely get stuck in an endless loop of underfitting—not because I lacked ML theory, but because I was trying to force highly contextual language into brittle heuristics too early.
+
+That said, I also realized that the prototype can—and arguably should—expose mistakes. Demonstrating how subjectivity and unpredictable external patterns can interfere with rating instruments is itself informative. In other words, part of the value here is to show where structured frameworks fail gracefully, even before we talk about bias.
+
+After this realization, I restarted with a different architecture (the one described in the README). I will have a developer joining soon, but so far I have been using Claude/GPT to assist with the implementation while I drive the clinical constraints and evaluation criteria.
+
+Key difficulties and fixes
+
+The first major difficulty was heuristic design. I initially attempted to include many phrase cues, including Portuguese (pt-BR) expressions and mixed-language triggers. This increased complexity and slowed debugging. I therefore decided to standardize English as the project default and keep non-English cues inert for now.
+
+A second issue emerged around temporal reasoning. I initially overlooked an explicit representation of future time as a separate temporal state. As a result, the dummy extractor incorrectly conflated temporal references (e.g., “tomorrow”) with suicide planning, which is a distinct construct in frameworks like the C-SSRS. This produced false positives where a future-oriented word alone triggered a “plan” signal.
+
+This error was detected using a minimal test with a single input case. The root cause was traced to two factors:
+
+Temporal markers were incorrectly included in the suicide plan heuristic list.
+
+The schema did not support a future temporal state, causing valid model output to be silently downgraded to unknown (this took time to notice and debug).
+
+Both issues were resolved by:
+
+Separating temporal markers from suicide plan markers
+
+Adding future as an explicit value in the Temporal enum (and acknowledging that temporal extraction becomes increasingly ambiguous when the text includes prior attempts, episodes, diagnoses, and treatments)
+
+Ensuring that suicide plan detection requires method/means context, not time alone.
+
+
+I'm also having difficulty with CHATBOTS. It's very hard to set up a mental health project, even when I make it clear that I'm a doctor who works in the area. I keep getting red flags.
+
+
+
+Current status
+
+At the current state, the system:
+
+Runs fully locally
+
+Uses a deterministic dummy LLM client (no external API calls yet)
+
+Processes one case at a time
+
+Produces structured, auditable outputs
+
+Correctly distinguishes temporal references from suicide planning (validated on 1 case so far)
+
+Avoids overreach and unsupported assertions (validated on 1 case so far)
+
+Only one synthetic case has been processed intentionally, to validate correctness before scaling.
+
+Next steps
+
+Next steps will include:
+
+Organizing papers collected from public databases (SciELO, PubMed). Even though the C-SSRS and PHQ-9 are widely used, it is surprisingly difficult to find ready-to-use raw text data. Psychiatry is often “punished” by the lack of objective exams: data is highly contextual and subjective.
+
+Tightening the definition of suicide plan to require explicit self-harm context
+
+Testing a small set of carefully chosen synthetic cases
+
+Gradually expanding toward batch processing
+
+Setting up the project database for tracking inputs/outputs and iterations (I expect this to take time)
+
+At this stage, the priority remains correctness, safety, and interpretability, not coverage or optimization.
