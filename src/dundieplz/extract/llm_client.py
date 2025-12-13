@@ -21,15 +21,13 @@ class DummyLLMClient:
     """
 
     def generate_json(self, prompt: str) -> Dict[str, Any]:
-        # We only need the raw narrative; prompt contains it at the end.
-        # We'll try to extract the text block between <<<TEXT>>> markers.
+        # Extract the narrative between markers if present.
         m = re.search(r"<<<TEXT>>>\s*(.*?)\s*<<<END_TEXT>>>", prompt, flags=re.DOTALL)
         text = m.group(1) if m else prompt
-
         lower = text.lower()
 
-        def ev(span: str, start: Optional[int] = None, end: Optional[int] = None):
-            d = {"text": span}
+        def ev(span: str, start: Optional[int] = None, end: Optional[int] = None) -> Dict[str, Any]:
+            d: Dict[str, Any] = {"text": span}
             if start is not None:
                 d["start"] = start
             if end is not None:
@@ -41,7 +39,7 @@ class DummyLLMClient:
             "end it all",
             "kill myself",
             "suicide",
-            "wish i were dead",
+            "wish i was dead",
             "want to die",
             "better off dead",
         ]
@@ -62,6 +60,7 @@ class DummyLLMClient:
             "i'm going to do it",
             "i will do it tonight",
         ]
+        # NOTE: plan_markers should be method/means, NOT time words like "tomorrow".
         plan_markers = [
             "plan",
             "method",
@@ -72,8 +71,8 @@ class DummyLLMClient:
             "gun",
             "knife",
             "bridge",
-            "tonight",
-            "tomorrow",
+            "poison",
+            "drown",
         ]
         past_markers = [
             "last year",
@@ -116,17 +115,19 @@ class DummyLLMClient:
             "extractor_version": "0.1",
         }
 
-        # simple uncertainty cues
+        # Simple uncertainty cues
         if any(w in lower for w in ["maybe", "not sure", "i guess", "sort of", "kind of"]):
             out["uncertainty_cues"].append("hedging_language")
 
-        # temporal guess
+        # Temporal guess (keep separate from plan!)
         if any(w in lower for w in ["today", "right now", "currently"]):
             out["temporal"] = "current"
         elif any(w in lower for w in ["yesterday", "last week", "recently"]):
             out["temporal"] = "recent"
         elif any(w in lower for w in ["last year", "years ago", "in 2019", "in 2020"]):
             out["temporal"] = "past"
+        elif any(w in lower for w in ["tomorrow", "tonight", "next week", "soon"]):
+            out["temporal"] = "future"
 
         return out
 
@@ -226,7 +227,6 @@ AMBIGUOUS_CUES = [
 # =========================
 # OPTIONAL: unified export
 # =========================
-# Useful if you want to loop through categories programmatically.
 
 ALL_CUE_GROUPS = {
     "contextual": CONTEXTUAL_CUES,
