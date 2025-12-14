@@ -1,235 +1,147 @@
+# -*- coding: ascii -*-
+
 from __future__ import annotations
 
-import json
-import re
-from dataclasses import dataclass
-from typing import Any, Dict, Optional, Protocol
+from typing import Dict, List, Protocol
 
+
+# -----------------------------
+# Cues (used by cue_matcher in extractor.py)
+# -----------------------------
+
+CONTEXTUAL_CUES: List[str] = [
+    "I gave my dog away",
+    "I gave my pet away",
+    "I gave my pets away",
+    "My pets will be fine",
+    "I separated the inheritance",
+    "I already separated the inheritance",
+    "My kids will be fine",
+    "My children will be fine",
+    "My wife will be fine",
+    "My husband will be fine",
+    "I feel sorry for my wife",
+    "I feel sorry for my husband",
+    "I feel sorry for my kids",
+    "I feel sorry for my children",
+    "I cannot keep waiting",
+    "Better I do it",
+]
+
+SUBJECTIVE_CUES: List[str] = [
+    "there is only one way to solve this",
+    "only one way to solve this",
+    "I cannot take it anymore",
+    "I am done",
+    "I am exhausted",
+    "I am a burden",
+    "I cause too much trouble",
+]
+
+AMBIGUOUS_CUES: List[str] = [
+    "saio da vida para entrar na historia",
+    "chega eu nao aguento mais",
+    "eu queria nao acordar amanha",
+]
+
+DIRECT_SUICIDAL_CUES: List[str] = [
+    "kill myself",
+    "suicide",
+    "want to die",
+    "wish i were dead",
+    "end it all",
+    "better off dead",
+    "eu queria nao acordar amanha",
+    "vou por uma bala na minha cabeca",
+]
+
+
+# -----------------------------
+# LLMClient protocol
+# -----------------------------
 
 class LLMClient(Protocol):
-    def generate_json(self, prompt: str) -> Dict[str, Any]:
-        """Return a JSON-like dict. Must be valid JSON structure (no markdown)."""
+    def generate_json(self, prompt: str) -> Dict:
         ...
 
 
-@dataclass
+# -----------------------------
+# Dummy backend (heuristic baseline)
+# -----------------------------
+
 class DummyLLMClient:
     """
-    A local, deterministic fallback that mimics an extractor without calling any LLM.
+    Lightweight heuristic backend.
+    Purpose: smoke tests and baseline behavior.
 
-    This is NOT a clinical tool. It's a smoke-test client so the pipeline works end-to-end.
+    This is NOT clinical inference.
     """
 
-    def generate_json(self, prompt: str) -> Dict[str, Any]:
-        # Extract the narrative between markers if present.
-        m = re.search(r"<<<TEXT>>>\s*(.*?)\s*<<<END_TEXT>>>", prompt, flags=re.DOTALL)
-        text = m.group(1) if m else prompt
+    def __init__(self) -> None:
+        self.backend_name = "dummy"
+
+    def generate_json(self, prompt: str) -> Dict:
+        text = prompt or ""
         lower = text.lower()
 
-        def ev(span: str, start: Optional[int] = None, end: Optional[int] = None) -> Dict[str, Any]:
-            d: Dict[str, Any] = {"text": span}
-            if start is not None:
-                d["start"] = start
-            if end is not None:
-                d["end"] = end
-            return d
+        ideation_hits = self._find_any(lower, DIRECT_SUICIDAL_CUES)
 
-        # Heuristic examples (toy, for pipeline testing)
-        suicidal_phrases = [
-            "end it all",
-            "kill myself",
-            "suicide",
-            "wish i was dead",
-            "want to die",
-            "better off dead",
-        ]
-        selfharm_phrases = [
-            "cut myself",
-            "cut herself",
-            "cut himself",
-            "self-harm",
-            "self harm",
-            "self-cutting",
-            "burned myself",
-            "scratch until bleeding",
-        ]
-        intent_phrases = [
-            "i will kill myself",
-            "i'm going to kill myself",
-            "i plan to kill myself",
-            "i'm going to do it",
-            "i will do it tonight",
-        ]
-        # NOTE: plan_markers should be method/means, NOT time words like "tomorrow".
-        plan_markers = [
-            "plan",
-            "method",
-            "rope",
-            "pills",
-            "overdose",
-            "jump",
-            "gun",
-            "knife",
-            "bridge",
-            "poison",
-            "drown",
-        ]
-        past_markers = [
-            "last year",
-            "years ago",
-            "previous attempt",
-            "attempted",
-            "overdosed",
-            "tried to kill myself",
-        ]
+        temporal = "unknown"
+        if any(w in lower for w in ["now", "right now", "today", "emergency department"]):
+            temporal = "current"
+        elif any(w in lower for w in ["yesterday", "last night", "earlier today"]):
+            temporal = "recent"
+        elif any(w in lower for w in ["tonight", "tomorrow", "next week"]):
+            temporal = "future"
+        elif any(w in lower for w in ["years ago", "months ago", "last year"]):
+            temporal = "past"
 
-        def find_any(phrases):
-            for p in phrases:
-                idx = lower.find(p)
-                if idx != -1:
-                    return p, idx, idx + len(p)
-            return None
+        if ideation_hits:
+            suicidal_ideation = {
+                "presence": "present",
+                "evidence": ideation_hits,
+            }
+            uncertainty_cues: List[str] = []
+            missing_information: List[str] = [
+                "method_or_plan_details_not_specified"
+            ]
+        else:
+            suicidal_ideation = {
+                "presence": "indeterminate",
+                "evidence": [],
+            }
+            uncertainty_cues = [
+                "insufficient_explicit_ideation_evidence"
+            ]
+            missing_information = []
 
-        si = find_any(suicidal_phrases)
-        sh = find_any(selfharm_phrases)
-        it = find_any(intent_phrases)
-        pl = find_any(plan_markers)
-        pb = find_any(past_markers)
-
-        def signal_obj(found):
-            if not found:
-                return {"presence": "indeterminate", "evidence": []}
-            phrase, s, e = found
-            return {"presence": "present", "evidence": [ev(text[s:e], s, e)]}
-
-        out: Dict[str, Any] = {
-            "suicidal_ideation": signal_obj(si),
-            "self_harm": signal_obj(sh),
-            "intent": signal_obj(it),
-            "plan": signal_obj(pl),
-            "past_behavior": signal_obj(pb),
-            "temporal": "unknown",
-            "uncertainty_cues": [],
-            "missing_information": [],
-            "extracted_by": "dummy",
-            "extractor_version": "0.1",
+        return {
+            "suicidal_ideation": suicidal_ideation,
+            "self_harm": {"presence": "indeterminate", "evidence": []},
+            "intent": {"presence": "indeterminate", "evidence": []},
+            "plan": {"presence": "indeterminate", "evidence": []},
+            "past_behavior": {"presence": "indeterminate", "evidence": []},
+            "temporal": temporal,
+            "uncertainty_cues": uncertainty_cues,
+            "missing_information": missing_information,
         }
 
-        # Simple uncertainty cues
-        if any(w in lower for w in ["maybe", "not sure", "i guess", "sort of", "kind of"]):
-            out["uncertainty_cues"].append("hedging_language")
-
-        # Temporal guess (keep separate from plan!)
-        if any(w in lower for w in ["today", "right now", "currently"]):
-            out["temporal"] = "current"
-        elif any(w in lower for w in ["yesterday", "last week", "recently"]):
-            out["temporal"] = "recent"
-        elif any(w in lower for w in ["last year", "years ago", "in 2019", "in 2020"]):
-            out["temporal"] = "past"
-        elif any(w in lower for w in ["tomorrow", "tonight", "next week", "soon"]):
-            out["temporal"] = "future"
-
-        return out
-
-
-class JsonParsingLLMClient:
-    """
-    Wraps any text-generation backend that returns a string.
-    You provide a callable `generate_text(prompt)->str`, we parse JSON.
-    """
-
-    def __init__(self, generate_text):
-        self._generate_text = generate_text
-
-    def generate_json(self, prompt: str) -> Dict[str, Any]:
-        raw = self._generate_text(prompt)
-
-        # Try direct JSON first
-        try:
-            return json.loads(raw)
-        except Exception:
-            pass
-
-        # Fallback: extract first JSON object found in the text
-        m = re.search(r"\{.*\}", raw, flags=re.DOTALL)
-        if not m:
-            raise ValueError("LLM did not return JSON.")
-        return json.loads(m.group(0))
-
-
-# =========================
-# CONTEXTUAL CUES
-# =========================
-# Preparatory / contextual signals.
-# Statements that suggest psychological preparation, resolution,
-# or concern for consequences, without explicit ideation.
-
-CONTEXTUAL_CUES = [
-    "i have already sorted my affairs",
-    "i have everything in order",
-    "my children will be okay",
-    "my wife will be fine without me",
-    "my husband will be fine without me",
-    "they will be better off this way",
-    "everyone will be taken care of",
-    "i made sure everything is settled",
-    "i arranged my finances",
-    "i put my things in order",
-    "i have already said my goodbyes",
-    "there is nothing left to fix",
-]
-
-
-# =========================
-# SUBJECTIVE CUES
-# =========================
-# Emotional / affective burden.
-# Expressions of guilt, pity, emotional conflict, or perceived burden.
-
-SUBJECTIVE_CUES = [
-    "i feel sorry for my wife",
-    "i feel sorry for my children",
-    "i feel sorry for my husband",
-    "i hate being a burden",
-    "they deserve better than me",
-    "i only cause pain",
-    "i feel guilty for staying alive",
-    "they suffer because of me",
-    "i ruin everything",
-    "i feel ashamed to keep going",
-    "i disappoint everyone",
-    "i am tired of hurting people",
-]
-
-
-# =========================
-# AMBIGUOUS CUES
-# =========================
-# Vague, non-specific statements.
-# Time pressure, inevitability, or action orientation without explicit meaning.
-
-AMBIGUOUS_CUES = [
-    "it might be better this way",
-    "maybe this is the only option",
-    "i cannot keep waiting",
-    "i do not see another way",
-    "something has to be done",
-    "this cannot go on",
-    "i just need to do it",
-    "i am running out of time",
-    "i cannot hold on anymore",
-    "there is no point in delaying",
-    "it feels inevitable",
-    "i am done trying",
-]
-
-
-# =========================
-# OPTIONAL: unified export
-# =========================
-
-ALL_CUE_GROUPS = {
-    "contextual": CONTEXTUAL_CUES,
-    "subjective": SUBJECTIVE_CUES,
-    "ambiguous": AMBIGUOUS_CUES,
-}
+    def _find_any(self, lower_text: str, cues: List[str]) -> List[Dict]:
+        evidence: List[Dict] = []
+        for cue in cues:
+            cue_l = cue.lower()
+            start = 0
+            while True:
+                idx = lower_text.find(cue_l, start)
+                if idx == -1:
+                    break
+                evidence.append(
+                    {
+                        "text": cue,
+                        "start": idx,
+                        "end": idx + len(cue_l),
+                        "source": "llm",
+                    }
+                )
+                start = idx + 1
+        return evidence
