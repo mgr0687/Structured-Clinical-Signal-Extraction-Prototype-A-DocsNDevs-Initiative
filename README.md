@@ -1,220 +1,214 @@
-# Structured Clinical Signal Extraction Prototype: A DocsNDevs Initiative
+# Structured Clinical Signal Extraction Prototype: A DocsNDevs Initiative [![Build Status](https://img.shields.io/github/workflow/status/username/repository/CI)](https://github.com/username/repository/actions) [![Coverage Status](https://coveralls.io/repos/github/username/repository/badge.svg?branch=main)](https://coveralls.io/github/username/repository?branch=main) [![License](https://img.shields.io/badge/license-MIT-blue)](https://opensource.org/licenses/MIT) [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
+This is an early-stage, research-oriented prototype for structured extraction of suicide-related clinical signals from free-text psychiatric notes.
 
-[![Build Status](https://img.shields.io/github/workflow/status/username/repository/CI)](https://github.com/username/repository/actions)
-[![Coverage Status](https://coveralls.io/repos/github/username/repository/badge.svg?branch=main)](https://coveralls.io/github/username/repository?branch=main)
-[![License](https://img.shields.io/badge/license-MIT-blue)](https://opensource.org/licenses/MIT)
-[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
+This project explores how subjective and contextual psychiatric language can be transformed into auditable, deterministic structures while acknowledging the epistemic limits, uncertainty, and failure modes inherent in clinical text analysis.
 
-**DundiePlz** is an early-stage, research-oriented prototype for **structured extraction of suicide-related clinical signals** from free-text psychiatric notes.
+Please note: DundiePlz is not a production-ready system, not a diagnostic tool, and not a clinical decision support system. At this stage, DundiePlz is primarily focused on governance, interpretability, and error discovery, not performance, scalability, or clinical validity.
 
-The project explores how subjective, contextual psychiatric language can be mapped into **auditable, deterministic structures**, while explicitly acknowledging epistemic limits, uncertainty, and failure modes.
+Quickstart
+Prerequisites
 
-This is **not** a production system, **not** a diagnostic tool, and **not** a clinical decision-support system.  
-At this stage, DundiePlz is focused on **governance, interpretability, and error discovery**, not performance or scale.
+Ensure Python 3.8+ is installed. If not, download it from python.org
+.
 
----
+Clone the repository:
 
-## Quickstart
+git clone https://github.com/username/dundieplz.git
+cd dundieplz
 
-### Prerequisites
 
-Ensure you have Python 3.8+ installed. If not, download it from [python.org](https://www.python.org/downloads/).
+Install dependencies:
 
-1. **Clone the repository**:
+It is recommended to create and activate a virtual environment:
 
-    ```bash
-    git clone https://github.com/username/dundieplz.git
-    cd dundieplz
-    ```
+python -m venv .venv
+source .venv/bin/activate  # On Windows, use .venv\Scripts\activate
 
-2. **Install dependencies**:
 
-    Create and activate a virtual environment (optional but recommended):
+Then install the required packages:
 
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate  # On Windows use .venv\Scripts\activate
-    ```
+pip install -r requirements.txt
 
-    Then install the required packages:
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+Run the Streamlit GUI:
 
-3. **Run the Streamlit GUI**:
+After installing dependencies, run the Streamlit application to interact with the model:
 
-    After installing dependencies, run the Streamlit application to interact with the model:
+streamlit run dundieplz/gui_app.py
 
-    ```bash
-    streamlit run dundieplz/gui_app.py
-    ```
 
-4. **Interact with the prototype**:
+Interact with the prototype:
 
-    - Load synthetic cases from the buttons
-    - Paste or type clinical notes into the input field
-    - Choose the backend (rules or dummy)
-    - See the output with evidence highlighting and structured JSON
+Load synthetic cases using the buttons.
 
-    The model uses a **deterministic dummy backend** or a **rule-based backend** for simulating NLP behavior and validating extraction.
+Paste or type clinical notes into the input field.
 
----
+Choose the backend (rules or dummy).
 
-## Project goals
+View the structured output with evidence highlighting and structured JSON.
+
+The model uses a deterministic dummy backend or a rule-based backend for simulating NLP behavior and validating extraction.
+
+Project Goals
 
 The primary goals of DundiePlz are to:
 
-- Explore the **limits of structured frameworks** (e.g., C-SSRS, PHQ-9) when applied to free-text clinical narratives
-- Design a **framework-agnostic core layer** that normalizes ambiguous or indeterminate signals
-- Produce **auditable outputs** with explicit evidence spans
-- Avoid unsupported clinical inference
-- Prioritize **determinism, transparency, and safety** during early prototyping
+Explore the limitations of structured frameworks (e.g., C-SSRS, PHQ-9) when applied to free-text clinical narratives.
 
----
+Design a framework-agnostic core layer that normalizes ambiguous or indeterminate signals.
 
-## Non-goals (important)
+Produce auditable outputs with explicit evidence spans, enabling transparency in clinical decision-making processes.
 
-DundiePlz does **not** aim to:
+Avoid unsupported clinical inference and overreach.
 
-- Predict suicide risk
-- Replace clinical judgment
-- Perform automated diagnosis
-- Provide real-time patient-facing interventions
-- Optimize accuracy, recall, or performance metrics at this stage
+Prioritize determinism, transparency, and safety during early prototyping and development.
 
-Any apparent “intelligence” in the system is intentionally constrained.
+Non-goals
 
----
+DundiePlz does not aim to:
 
-## Architecture overview
+Predict suicide risk.
 
-The system is intentionally layered:
+Replace clinical judgment or human expertise.
 
-### 1. Core signal layer (framework-agnostic)
+Perform automated diagnosis.
 
-At the lowest level, the system extracts **atomic clinical signals**, such as:
+Provide real-time patient-facing interventions.
 
-- Suicidal ideation (presence / absence / indeterminate)
-- Intent
-- Plan
-- Past behavior
-- Temporal orientation (past / recent / current / future / unknown)
+Optimize performance or recall metrics at this stage.
 
-This layer is **non-clinical** and **non-inferential**.  
-Its purpose is to normalize ambiguity and prevent uncertainty from propagating upward.
+Any apparent “intelligence” in the system is intentionally constrained for research purposes.
 
-### 2. Framework-specific layers (planned / partial)
+Architecture Overview
+
+The system is structured with a layered design:
+
+1. Core Signal Layer (Framework-agnostic)
+
+The core signal layer extracts atomic clinical signals, such as:
+
+Suicidal ideation (presence / absence / indeterminate)
+
+Intent
+
+Plan
+
+Past behavior
+
+Temporal orientation (past / recent / current / future / unknown)
+
+This layer is non-clinical and non-inferential, ensuring that ambiguity is handled early and does not propagate to higher levels of analysis.
+
+2. Framework-Specific Layers (Planned / Partial)
 
 Higher-level frameworks such as:
 
-- C-SSRS
-- PHQ-9
+C-SSRS
 
-are treated as **interpretive overlays** on top of the core signals.  
-They are not hard-coded assumptions.
+PHQ-9
 
----
+are treated as interpretive overlays on top of the core signals. These frameworks do not assume or encode any clinical decision-making logic by default but can be integrated in a way that respects the limitations of each framework.
 
-## Deterministic backends
+Deterministic Backends
 
-To preserve reproducibility and auditability, the project currently supports **offline backends**:
+To preserve reproducibility and auditability, the project currently supports offline backends:
 
-- **Dummy backend** — minimal, conservative extraction used for smoke testing
-- **Rule-based backend** — deterministic pattern matching used to simulate NLP behavior on synthetic cases
+Dummy Backend — A minimal, conservative extraction used for smoke testing and ensuring baseline functionality.
 
-These backends do **not** perform clinical inference.  
-They exist to validate the pipeline, schemas, and failure modes.
+Rule-Based Backend — A deterministic pattern matching system used to simulate NLP behavior for validating the extraction pipeline with synthetic cases.
 
-LLM-based backends are intentionally deferred.
+These backends do not perform clinical inference but serve to validate the extraction pipeline and evaluate the functioning of the core system.
 
----
+LLM-based backends are intentionally deferred until the system is more mature.
 
-## Evidence-first outputs
+Evidence-First Outputs
 
 All extracted signals include:
 
-- Explicit presence state (`present`, `absent`, `indeterminate`)
-- Evidence spans with character offsets
-- Source attribution (rule-based, cue-based, or LLM-based)
+Explicit presence states (present, absent, indeterminate).
 
-This allows downstream users to **inspect why** a signal exists, not just that it exists.
+Evidence spans with character offsets, making the extraction process transparent.
 
----
+Source attribution (rule-based, cue-based, or LLM-based) for full traceability of the signals.
 
-## Synthetic cases
+This allows downstream users to inspect why a signal was generated, not just its presence or absence.
 
-The project uses **clinically realistic synthetic cases**, written by a psychiatrist with experience in emergency and urgent care settings.
+Synthetic Cases
 
-Each synthetic case:
+The project uses clinically realistic synthetic cases, created by a psychiatrist with experience in emergency and urgent care settings. These cases are designed for validation, not for training, and are explicitly labeled as fictional.
 
-- Is explicitly labeled as fictional
-- Includes sensitive content warnings
-- Is used for validation, not training
+Each synthetic case includes:
 
-No real patient data is used.
+A fictional case disclaimer.
 
----
+Sensitive content warnings.
 
-## Minimal GUI
+No real patient data is used in the project.
 
-A lightweight Streamlit-based GUI is included to:
+Minimal GUI
 
-- Paste or load full synthetic cases
-- Switch between deterministic backends
-- Inspect structured outputs
-- Visualize extracted evidence
+A lightweight Streamlit-based GUI is included for:
 
-The GUI is a **testing interface**, not a user-facing application.
+Loading full synthetic cases.
 
----
+Switching between deterministic backends.
 
-## Safety considerations
+Inspecting structured outputs and evidence.
+
+Visualizing extracted evidence.
+
+The GUI serves as a testing interface and is not intended for clinical use or deployment.
+
+Safety Considerations
 
 DundiePlz intentionally avoids:
 
-- Generating new ideation
-- Suggesting methods or means
-- Providing advice or recommendations
-- Escalating ambiguous signals into conclusions
+Generating new ideation or suggestions for suicide methods.
 
-Ambiguity is preserved when ambiguity exists.
+Making unsupported clinical assertions.
 
----
+Providing advice or clinical recommendations.
 
-## Current status
+Escalating ambiguous signals to actionable conclusions.
+
+Ambiguity is preserved when ambiguity exists, and no unqualified assumptions are made by the system.
+
+Current Status
 
 As of this version:
 
-- Fully local execution
-- One-case-at-a-time processing
-- Deterministic, auditable outputs
-- Explicit handling of temporal references
-- Conservative behavior by design
+Fully local execution.
 
-The project is in **early prototype (v0.1)**.
+One-case-at-a-time processing.
 
----
+Deterministic, auditable outputs.
 
-## Planned next steps
+Explicit handling of temporal references.
 
-- Expand synthetic case evaluation set
-- Introduce batch processing
-- Improve temporal reasoning edge cases
-- Formalize framework-specific overlays
-- Explore governance and evaluation metrics
-- Investigate safe integration of non-local models
+Conservative behavior by design, with explicit limits to the model's "intelligence".
 
----
+The project is in early prototype (v0.1), and scalability is not yet a primary concern.
 
-## Disclaimer
+Planned Next Steps
 
-This project is for **research and prototyping purposes only**.
+Planned next steps include:
 
-It is **not** intended for clinical use, diagnosis, triage, or patient care.
+Expanding the synthetic case evaluation set.
 
----
+Introducing batch processing capabilities for more efficient analysis.
 
-## Author
+Improving temporal reasoning edge cases.
+
+Formalizing the integration of framework-specific overlays.
+
+Exploring governance and evaluation metrics.
+
+Investigating safe integration of non-local models for scalability.
+
+Disclaimer
+
+This project is for research and prototyping purposes only. It is not intended for clinical use, diagnosis, triage, or patient care. All outputs should be interpreted with caution, and professional medical expertise should always be consulted in clinical settings.
+
+Author
 
 Developed by a psychiatrist with clinical experience in emergency and urgent care settings, exploring the intersection of psychiatry, NLP, and AI governance.
